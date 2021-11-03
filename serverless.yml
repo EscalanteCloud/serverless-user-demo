@@ -1,0 +1,124 @@
+service: sls-demo
+frameworkVersion: '2'
+
+plugins:
+  - serverless-offline # allows us to run locally using 'sls offline'
+  - serverless-iam-roles-per-function # allows us to specify IAM roles per function with least privilege
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  lambdaHashingVersion: 20201221
+  stage: ${opt:stage, 'dev'} #default values that can be overidden on CLI
+  region: ${opt:region, 'us-east-1'} #default values that can be overidden on CLI
+  environment:
+    USER_TABLE: ${self:provider.stage}-userTable
+
+# Keep the lambda functions as small as possible to reduce execution time
+package:
+  excludeDevDependencies: true
+  individually: true
+
+functions:
+  getUsers: 
+    handler: functions/user/getUsers.handler
+    events:
+      - httpApi:
+          path: /users
+          method: get
+    iamRoleStatements:
+      - Effect: "Allow"        
+        Action:
+          - dynamodb:Scan
+        Resource: 
+          - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USER_TABLE}
+    package:
+      exclude:
+        - ./**
+      include:
+        - functions/user/getUsers.js
+  getUser:
+    handler: functions/user/getUser.handler
+    events:
+      - httpApi:
+          path: /users/{id}
+          method: get
+    iamRoleStatements:
+      - Effect: "Allow"        
+        Action:
+          - dynamodb:GetItem
+        Resource: 
+          - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USER_TABLE}
+    package:
+      exclude:
+        - ./**
+      include:
+        - functions/user/getUser.js
+  postUser:
+    handler: functions/user/postUser.handler
+    events:
+      - httpApi:
+          path: /users
+          method: post
+    iamRoleStatements:
+      - Effect: "Allow"        
+        Action:
+          - dynamodb:PutItem
+          - dynamodb:UpdateItem
+        Resource: 
+          - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USER_TABLE}
+    package:
+      exclude:
+        - ./**
+      include:
+        - functions/user/postUser.js
+  putUser:
+    handler: functions/user/postUser.handler
+    events:
+      - httpApi:
+          path: /users/{id}
+          method: put
+    iamRoleStatements:
+      - Effect: "Allow"        
+        Action:
+          - dynamodb:PutItem
+          - dynamodb:UpdateItem
+        Resource: 
+          - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USER_TABLE}
+    package:
+      exclude:
+        - ./**
+      include:
+        - functions/user/postUser.js
+  deleteUser:
+    handler: functions/user/deleteUser.handler
+    events:
+      - httpApi:
+          path: /users/{id}
+          method: delete
+    iamRoleStatements:
+      - Effect: "Allow"        
+        Action:
+          - dynamodb:DeleteItem
+        Resource: 
+          - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USER_TABLE}
+    package:
+      exclude:
+        - ./**
+      include:
+        - functions/user/deleteUser.js
+
+#Cloudformation to create DynamoDB table
+resources:
+  Resources:
+    userTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.USER_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: N
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
