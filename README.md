@@ -15,3 +15,5 @@ An example project for demonstrating Serverless Framework for manipulating users
 ## Deploy to AWS
 `sls deploy --stage {dev|test|prod} --aws-profile {aws_profile_name}`
 
+## Testing
+Import the postman collection from the postman folder included in the project.  Once imported, modify the collection and change the base_api variable to the appropriate value (http://localhost:3000 for local) or the provided API base URL AWS generates on a successful deploy.
